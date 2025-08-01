@@ -7,6 +7,7 @@
 
 stdenv.mkDerivation {
   name = "geolite2";
+  version = "2025.08.01";
 
   src = fetchFromGitHub {
     owner = "P3TERX";
@@ -39,7 +40,7 @@ stdenv.mkDerivation {
     runHook preCheck
 
     for db in ./GeoLite2-*.mmdb; do
-      mmdbinspect -db $db 8.8.8.8
+      mmdbinspect -db $db 8.8.8.8 >/dev/null
     done
 
     runHook postCheck
