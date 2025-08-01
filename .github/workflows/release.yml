@@ -70,3 +70,11 @@ jobs:
 
           docker tag "$IMAGE_ID" "$GHCR_TAG"
           docker push "$GHCR_TAG"
+
+          if [[ "$IMAGE_ID" =~ geolite2(-[0-9]+){3} ]]; then
+            LATEST_GEOLITE2=$(sed 's/\(.*\)\(geolite2\)\(-[0-9]\+\)\{3\}\(.*\)/\1\2\4/' <<< $IMAGE_ID)
+            GHCR_TAG="${{ env.REGISTRY }}/${{ github.repository }}/$LATEST_GEOLITE2"
+
+            docker tag "$IMAGE_ID" "$GHCR_TAG"
+            docker push "$GHCR_TAG"
+          fi
