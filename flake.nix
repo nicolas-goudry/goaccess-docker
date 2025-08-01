@@ -64,49 +64,15 @@
       packages = eachSystem (
         pkgs:
         let
-          inherit (pkgs) lib;
+          xpkgs = pkgs.lib.packagesFromDirectoryRecursive {
+            inherit (pkgs) callPackage;
 
-          builder =
-            args:
-            import ./default.nix (
-              {
-                inherit pkgs;
-                inherit geolite2;
-                inherit (nix2container.packages.${pkgs.system}) nix2container;
-              }
-              // args
-            );
-          distros = import ./helpers/distros.nix;
-          geolite2 = pkgs.callPackage ./pkgs/geolite2.nix { };
+            directory = ./pkgs;
+          };
         in
-        (lib.foldl'
-          (
-            acc: val:
-            let
-              distro = if val == "distroless" then null else val;
-            in
-            acc
-            // {
-              ${val} = builder { inherit distro; };
-              "${val}-geoip" = builder {
-                inherit distro;
-
-                withGeolocation = true;
-              };
-              "${val}-geolite2" = builder {
-                inherit distro;
-
-                withGeolite2 = true;
-              };
-            }
-          )
-          {
-            default = builder { };
-          }
-          ((lib.attrNames distros) ++ [ "distroless" ])
-        )
-        // {
-          inherit geolite2;
+        import ./default.nix {
+          inherit pkgs xpkgs;
+          inherit (nix2container.packages.${pkgs.system}) nix2container;
         }
       );
     };
