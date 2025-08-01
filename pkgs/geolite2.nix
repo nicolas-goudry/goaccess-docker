@@ -12,7 +12,7 @@ stdenv.mkDerivation {
     owner = "P3TERX";
     repo = "GeoLite.mmdb";
     rev = "download";
-    hash = "sha256-Cq6tilRYNPFJReHdHHqzjRfaEIajy9+5GYegAHND5OA=";
+    hash = "sha256-P+MCkV9GrFGA4ReMNq7hQs/1BNET2zx/1NgXf2uZErw=";
   };
 
   dontPatch = true;
