@@ -1,0 +1,20 @@
+name: Cleanup
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+  schedule:
+    # Run every day
+    - cron: 0 0 */1 * *
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/delete-package-versions@v5
+        with:
+          package-name: goaccess
+          package-type: container
+          # Only account for non-latest GeoLite2 images
+          ignore-versions: "^(?:\\d+\\.?){3}(?!.*geolite2-(?:\\d+[-.]?){3}).*"
+          min-versions-to-keep: 30
