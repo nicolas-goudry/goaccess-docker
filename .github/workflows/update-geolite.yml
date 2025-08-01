@@ -1,0 +1,39 @@
+name: Update GeoLite
+
+on:
+  schedule:
+    # Run every day
+    - cron: 0 2 */1 * *
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+      - name: Update GeoLite
+        run: nix run '.#geolite2.passthru.updateScript'
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet pkgs/geolite2.nix; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+      - name: Create Pull Request
+        if: steps.changes.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Update GeoLite2 database"
+          title: "chore: Update GeoLite2 database"
+          body: |
+            Automated update of GeoLite2 database.
+
+            This PR was automatically created by the scheduled workflow.
+          branch: update-geolite2
+          delete-branch: true
