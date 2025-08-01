@@ -1,14 +1,25 @@
 {
   pkgs ? import (fetchTarball "https://github.com/nixos/nixpkgs/archive/25.05.tar.gz") { },
+  nix2container ?
+    (import "${fetchTarball "https://github.com/nlewo/nix2container/archive/master.tar.gz"}/default.nix"
+      {
+        inherit pkgs;
+        inherit (pkgs) system;
+      }
+    ).nix2container,
   geolite2 ? pkgs.callPackage ./pkgs/geolite2.nix { },
   distro ? null,
-  withGeolocation ? withGeolite2,
   withGeolite2 ? false,
+  withGeolocation ? withGeolite2,
   ...
 }@args:
 
 let
-  inherit (pkgs) lib dockerTools goaccess;
+  inherit (pkgs)
+    lib
+    buildEnv
+    goaccess
+    ;
 
   throwDistro = throw "Invalid image provided!\n\nAllowed images:\n- ${lib.concatStringsSep "\n- " (lib.attrNames distros)}";
   distros = import ./helpers/distros.nix;
@@ -22,9 +33,9 @@ let
       "";
 
   fromImage =
-    if builtins.isNull distro then null else dockerTools.pullImage (distros.${distro} or throwDistro);
+    if builtins.isNull distro then "" else nix2container.pullImage (distros.${distro} or throwDistro);
 in
-dockerTools.buildLayeredImage {
+nix2container.buildImage {
   inherit fromImage;
 
   name = "goaccess";
@@ -34,16 +45,26 @@ dockerTools.buildLayeredImage {
     (if builtins.isNull distro then "" else "-${distro}")
   ];
 
-  contents = [
-    (goaccess.overrideAttrs {
-      inherit withGeolocation;
+  copyToRoot = buildEnv {
+    name = "root";
 
-      postPatch = lib.optionalString withGeolite2 ''
-        substituteInPlace config/goaccess.conf \
-          --replace-fail "#geoip-database /usr/local/share/GeoIP/GeoLiteCity.dat" "geoip-database ${geolite2}/share/GeoIP/GeoLite2-City.mmdb"
-      '';
-    })
-  ] ++ lib.optional withGeolite2 geolite2;
+    paths = [
+      (goaccess.overrideAttrs {
+        inherit withGeolocation;
+
+        postPatch = lib.optionalString withGeolite2 ''
+          substituteInPlace config/goaccess.conf \
+            --replace-fail "#geoip-database /usr/local/share/GeoIP/GeoLiteCity.dat" "geoip-database /share/GeoIP/GeoLite2-City.mmdb"
+        '';
+      })
+    ] ++ lib.optional withGeolite2 geolite2;
+
+    pathsToLink = [
+      "/bin"
+      "/etc"
+      "/share"
+    ];
+  };
 
   config.Entrypoint = [ "goaccess" ];
 }

@@ -65,8 +65,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push ${{ matrix.image }}
         run: |
-          IMAGE_PATH=$(nix build ".#${{ matrix.image }}" --no-link --print-out-paths)
-          IMAGE_ID=$(docker load -i "$IMAGE_PATH" | grep "Loaded image" | cut -d' ' -f3)
+          IMAGE_ID=$(nix run ".#${{ matrix.image }}.copyToDockerDaemon" | grep "Copy to Docker daemon" | cut -d' ' -f6)
           GHCR_TAG="${{ env.REGISTRY }}/${{ github.repository }}/$IMAGE_ID"
 
           docker tag "$IMAGE_ID" "$GHCR_TAG"

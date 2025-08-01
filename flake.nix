@@ -4,6 +4,11 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/25.05";
 
+    nix2container = {
+      url = "github:nlewo/nix2container";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -14,6 +19,7 @@
     {
       self,
       nixpkgs,
+      nix2container,
       treefmt-nix,
       ...
     }:
@@ -66,6 +72,7 @@
               {
                 inherit pkgs;
                 inherit geolite2;
+                inherit (nix2container.packages.${pkgs.system}) nix2container;
               }
               // args
             );
