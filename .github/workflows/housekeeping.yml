@@ -11,10 +11,18 @@ jobs:
   run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/delete-package-versions@v5
+      - name: Remove old GeoLite2 images
+        uses: actions/delete-package-versions@v5
         with:
           package-name: goaccess
           package-type: container
           # Only account for non-latest GeoLite2 images
           ignore-versions: "^(?:\\d+\\.?){3}(?!.*geolite2-(?:\\d+[-.]?){3}).*"
           min-versions-to-keep: 30
+      - name: Remove untagged images
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: goaccess
+          package-type: container
+          delete-only-untagged-versions: true
+          min-versions-to-keep: 0
