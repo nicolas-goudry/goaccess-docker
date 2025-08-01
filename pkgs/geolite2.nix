@@ -2,16 +2,24 @@
   stdenv,
   lib,
   fetchFromGitHub,
+  writeShellApplication,
+  common-updater-scripts,
+  curl,
+  jq,
   mmdbinspect,
 }:
 
+let
+  owner = "P3TERX";
+  repo = "GeoLite.mmdb";
+in
 stdenv.mkDerivation {
   name = "geolite2";
   version = "2025.08.01";
 
   src = fetchFromGitHub {
-    owner = "P3TERX";
-    repo = "GeoLite.mmdb";
+    inherit owner repo;
+
     rev = "download";
     hash = "sha256-P+MCkV9GrFGA4ReMNq7hQs/1BNET2zx/1NgXf2uZErw=";
   };
@@ -45,6 +53,21 @@ stdenv.mkDerivation {
 
     runHook postCheck
   '';
+
+  passthru.updateScript = writeShellApplication {
+    name = "geolite2-update";
+
+    runtimeInputs = [
+      common-updater-scripts
+      curl
+      jq
+    ];
+
+    text = ''
+      latest=$(curl https://api.github.com/repos/${owner}/${repo}/releases/latest | jq -r '.name')
+      update-source-version geolite2 "$latest" --ignore-same-version
+    '';
+  };
 
   meta = {
     description = "MaxMind's GeoIP2 GeoLite2 Country, City, and ASN databases";
