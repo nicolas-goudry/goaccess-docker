@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/release.yml
+      - "**.nix"
+      - flake.lock
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+      - name: Check Flake
+        run: nix flake check
+
+  get-images:
+    needs: check
+    runs-on: ubuntu-latest
+    outputs:
+      images: ${{ steps.get-images.outputs.images }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+      - id: get-images
+        run: |
+          nix flake show --json --quiet --quiet \
+            | jq -r '.packages["x86_64-linux"] | delpaths([["default"],["geolite2"]]) | keys | "images=" + (. | tostring)' \
+            >> $GITHUB_OUTPUT
+
+  build-and-push:
+    needs: get-images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJson(needs.get-images.outputs.images) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+      - name: Login to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push ${{ matrix.image }}
+        run: |
+          IMAGE_PATH=$(nix build ".#${{ matrix.image }}" --no-link --print-out-paths)
+          IMAGE_ID=$(docker load -i "$IMAGE_PATH" | grep "Loaded image" | cut -d' ' -f3)
+          GHCR_TAG="${{ env.REGISTRY }}/${{ github.repository }}/$IMAGE_ID"
+
+          docker tag "$IMAGE_ID" "$GHCR_TAG"
+          docker push "$GHCR_TAG"
