@@ -45,5 +45,5 @@ dockerTools.buildLayeredImage {
     })
   ] ++ lib.optional withGeolite2 geolite2;
 
-  config.Cmd = [ "goaccess" ];
+  config.Entrypoint = [ "goaccess" ];
 }
