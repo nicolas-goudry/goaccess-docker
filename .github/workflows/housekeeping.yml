@@ -10,6 +10,8 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
     steps:
       - name: Remove old GeoLite2 images
         uses: actions/delete-package-versions@v5
