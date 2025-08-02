@@ -1,6 +1,8 @@
 name: Update GeoLite
 
 on:
+  repository_dispatch:
+  workflow_dispatch:
   schedule:
     # Run every day
     - cron: 0 2 */1 * *
@@ -29,8 +31,8 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "Update GeoLite2 database"
-          title: "chore: Update GeoLite2 database"
+          commit-message: "refactor(pkgs/geolite2): update database"
+          title: "refactor(pkgs/geolite2): update database"
           body: |
             Automated update of GeoLite2 database.
 
