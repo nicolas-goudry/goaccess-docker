@@ -14,7 +14,7 @@ jobs:
       - name: Remove old GeoLite2 images
         uses: actions/delete-package-versions@v5
         with:
-          package-name: goaccess
+          package-name: goaccess-docker/goaccess
           package-type: container
           # Only account for non-latest GeoLite2 images
           ignore-versions: "^(?:\\d+\\.?){3}(?!.*geolite2-(?:\\d+[-.]?){3}).*"
@@ -22,7 +22,7 @@ jobs:
       - name: Remove untagged images
         uses: actions/delete-package-versions@v5
         with:
-          package-name: goaccess
+          package-name: goaccess-docker/goaccess
           package-type: container
           delete-only-untagged-versions: true
           min-versions-to-keep: 0
