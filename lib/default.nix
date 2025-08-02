@@ -73,6 +73,20 @@ rec {
 
       # Error message thrown when an invalid base image is specified
       throwDistro = throw "Invalid image provided!\n\nAllowed images:\n- ${lib.concatStringsSep "\n- " (lib.attrNames distros)}";
+
+      # Override GoAccess derivation attribute according to parameters
+      goaccessDrv = goaccess.override { withGeolocation = withGeolocation || withGeolite2; };
+
+      # Override GoAccess derivation call to patch configuration file to use GeoLite2 database path if enabled
+      goaccessBuild = goaccessDrv.overrideAttrs (
+        lib.optionalAttrs withGeolite2 {
+          postPatch = lib.optionalString withGeolite2 ''
+            substituteInPlace config/goaccess.conf \
+              --replace-fail "#geoip-database /usr/local/share/GeoIP/GeoLiteCity.dat" "geoip-database /share/GeoIP/GeoLite2-City.mmdb"
+          '';
+        }
+      );
+
     in
     nix2container.buildImage {
       name = "goaccess";
@@ -98,18 +112,7 @@ rec {
 
         # Packages to include in the container
         paths =
-          [
-            # GoAccess with custom configuration for geolocation
-            (goaccess.overrideAttrs {
-              inherit withGeolocation;
-
-              # Patch configuration file to use GeoLite2 database path if enabled
-              postPatch = lib.optionalString withGeolite2 ''
-                substituteInPlace config/goaccess.conf \
-                  --replace-fail "#geoip-database /usr/local/share/GeoIP/GeoLiteCity.dat" "geoip-database /share/GeoIP/GeoLite2-City.mmdb"
-              '';
-            })
-          ]
+          [ goaccessBuild ]
           # Include GeoLite2 database if requested
           ++ lib.optional withGeolite2 geolite2;
 
