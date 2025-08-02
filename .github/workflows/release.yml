@@ -65,21 +65,26 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push ${{ matrix.image }}
         run: |
-          IMAGE_ID=$(nix run ".#${{ matrix.image }}.copyToDockerDaemon" | grep "Copy to Docker daemon" | cut -d' ' -f6)
-          LATEST_ID=$(sed 's/^\(.*:\)[0-9]\+\(\.[0-9]\+\)\{2\}\(.*\)$/\1latest\3/' <<< $IMAGE_ID)
+          REGEX_GOACCESS_TO_LATEST='s/^\(.*:\)[0-9]\+\(\.[0-9]\+\)\{2\}\(.*\)$/\1latest\3/'
           REPO="${{ env.REGISTRY }}/${{ github.repository }}"
-          TAG="$REPO/$IMAGE_ID"
-          LATEST_TAG="$REPO/$LATEST_ID"
+          ID=$(nix run ".#${{ matrix.image }}.copyToDockerDaemon" | grep "Copy to Docker daemon" | cut -d' ' -f6)
+          ID_LATEST_GOACCESS=$(sed $REGEX_GOACCESS_TO_LATEST <<< $ID)
+          TAG="$REPO/$ID"
+          TAG_LATEST_GOACCESS="$REPO/$ID_LATEST_GOACCESS"
 
-          docker tag "$IMAGE_ID" "$TAG"
-          docker tag "$IMAGE_ID" "$LATEST_TAG"
+          docker tag "$ID" "$TAG"
+          docker tag "$ID" "$TAG_LATEST_GOACCESS"
           docker push "$TAG"
-          docker push "$LATEST_TAG"
+          docker push "$TAG_LATEST_GOACCESS"
 
-          if [[ "$IMAGE_ID" =~ geolite2(-[0-9]+){3} ]]; then
-            LATEST_GEOLITE2_ID=$(sed 's/\(.*\)\(geolite2\)\(-[0-9]\+\)\{3\}\(.*\)/\1\2\4/' <<< $IMAGE_ID)
-            LATEST_GEOLITE2_TAG="$REPO/$LATEST_GEOLITE2_ID"
+          if [[ "$ID" =~ geolite2(-[0-9]+){3} ]]; then
+            ID_LATEST_GEOLITE2=$(sed 's/\(.*\)\(geolite2\)\(-[0-9]\+\)\{3\}\(.*\)/\1\2\4/' <<< $ID)
+            ID_LATEST_ALL=$(sed $REGEX_GOACCESS_TO_LATEST <<< $ID_LATEST_GEOLITE2)
+            TAG_LATEST_GEOLITE2="$REPO/$ID_LATEST_GEOLITE2"
+            TAG_LATEST_ALL="$REPO/$ID_LATEST_ALL"
 
-            docker tag "$IMAGE_ID" "$LATEST_GEOLITE2_TAG"
-            docker push "$LATEST_GEOLITE2_TAG"
+            docker tag "$ID" "$TAG_LATEST_GEOLITE2"
+            docker tag "$ID" "$TAG_LATEST_ALL"
+            docker push "$TAG_LATEST_GEOLITE2"
+            docker push "$TAG_LATEST_ALL"
           fi
