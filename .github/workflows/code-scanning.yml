@@ -39,7 +39,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sarif_files
-          path: .trivy
+          include-hidden-files: true
+          path: .trivy/*.sarif
 
   upload-sarifs:
     needs: trivy-scan
