@@ -38,7 +38,7 @@ jobs:
       - id: get-images
         run: |
           nix flake show --json --quiet --quiet \
-            | jq -r '.packages["x86_64-linux"] | delpaths([["default"],["geolite2"]]) | keys | "images=" + (. | tostring)' \
+            | jq -r '.packages["x86_64-linux"] | delpaths([["default"],["geolite2"],["trivy-scan"]]) | keys | "images=" + (. | tostring)' \
             >> $GITHUB_OUTPUT
 
   build-and-push:

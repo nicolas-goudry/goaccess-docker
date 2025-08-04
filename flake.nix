@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/25.05";
 
-    nix2container = {
+    n2c = {
       url = "github:nlewo/nix2container";
       inputs.nixpkgs.follows = "nixpkgs";
     };
@@ -19,7 +19,7 @@
     {
       self,
       nixpkgs,
-      nix2container,
+      n2c,
       treefmt-nix,
       ...
     }:
@@ -34,8 +34,8 @@
         f:
         nixpkgs.lib.genAttrs systems (
           system:
-          f (
-            import nixpkgs {
+          f rec {
+            pkgs = import nixpkgs {
               inherit system;
 
               config.allowUnfreePredicate =
@@ -43,38 +43,60 @@
                 builtins.elem (nixpkgs.lib.getName pkg) [
                   "geolite2"
                 ];
-            }
-          )
+            };
+
+            xpkgs = pkgs.lib.packagesFromDirectoryRecursive {
+              inherit (pkgs) callPackage;
+
+              directory = ./pkgs;
+            };
+
+            nix2container = n2c.packages.${pkgs.system};
+          }
         );
-      treefmtEval = eachSystem (pkgs: treefmt-nix.lib.evalModule pkgs ./treefmt.nix);
+      treefmtEval = eachSystem ({ pkgs, ... }: treefmt-nix.lib.evalModule pkgs ./treefmt.nix);
     in
     {
       # nix flake check
-      checks = eachSystem (pkgs: {
-        formatting = treefmtEval.${pkgs.system}.config.build.check self;
-      });
+      checks = eachSystem (
+        { pkgs, ... }:
+        {
+          formatting = treefmtEval.${pkgs.system}.config.build.check self;
+        }
+      );
 
       # nix fmt
-      formatter = eachSystem (pkgs: treefmtEval.${pkgs.system}.config.build.wrapper);
+      formatter = eachSystem ({ pkgs, ... }: treefmtEval.${pkgs.system}.config.build.wrapper);
 
       # Development environment with tools available in PATH
-      devShells = eachSystem (pkgs: {
-        default = pkgs.callPackage ./shell.nix { };
-      });
+      devShells = eachSystem (
+        {
+          pkgs,
+          xpkgs,
+          nix2container,
+          ...
+        }:
+        {
+          default = pkgs.callPackage ./shell.nix {
+            inherit xpkgs nix2container;
+          };
+        }
+      );
 
       packages = eachSystem (
-        pkgs:
-        let
-          xpkgs = pkgs.lib.packagesFromDirectoryRecursive {
-            inherit (pkgs) callPackage;
-
-            directory = ./pkgs;
-          };
-        in
-        import ./default.nix {
+        {
+          pkgs,
+          xpkgs,
+          nix2container,
+          ...
+        }:
+        (import ./default.nix {
           inherit pkgs xpkgs;
-          inherit (nix2container.packages.${pkgs.system}) nix2container;
-        }
+          inherit (nix2container) nix2container;
+        })
+        // (import ./scripts {
+          inherit pkgs xpkgs nix2container;
+        })
       );
     };
 }
