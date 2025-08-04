@@ -32,7 +32,7 @@ jobs:
       - name: Get SARIF files
         id: sarif_files
         run: |
-          sarifs=(.trivy/*.sarif)
+          sarifs=(.trivy/scan_results/*.sarif)
           json_array=$(printf '%s\n' "${sarifs[@]}" | jq -R . | jq -sc .)
           echo "sarif_files=$json_array" >> $GITHUB_OUTPUT
       - name: Upload SARIF files
@@ -40,7 +40,7 @@ jobs:
         with:
           name: sarif_files
           include-hidden-files: true
-          path: .trivy/*.sarif
+          path: .trivy/scan_results/*.sarif
 
   upload-sarifs:
     needs: trivy-scan
@@ -56,7 +56,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: sarif_files
-          path: .trivy
+          path: .trivy/scan_results
       - name: Extract category from filename
         id: category
         run: |
