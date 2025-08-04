@@ -35,6 +35,11 @@ jobs:
           sarifs=(.trivy/*.sarif)
           json_array=$(printf '%s\n' "${sarifs[@]}" | jq -R . | jq -sc .)
           echo "sarif_files=$json_array" >> $GITHUB_OUTPUT
+      - name: Upload SARIF files
+        uses: actions/upload-artifact@v4
+        with:
+          name: sarif_files
+          path: .trivy
 
   upload-sarifs:
     needs: trivy-scan
@@ -46,6 +51,11 @@ jobs:
       matrix:
         sarif_file: ${{ fromJson(needs.trivy-scan.outputs.sarif_files) }}
     steps:
+      - name: Download SARIF files
+        uses: actions/download-artifact@v4
+        with:
+          name: sarif_files
+          path: .trivy
       - name: "Upload sarif file: ${{ matrix.sarif_file }}"
         uses: github/codeql-action/upload-sarif@v3
         with:
