@@ -108,40 +108,6 @@ scan_img() {
   fi
 }
 
-# Function to merge multiple SARIF files into a single consolidated report
-# This combines multiple scan results while preserving the SARIF format structure
-#
-# Arguments:
-#   $1 - Glob pattern of SARIF files to merge
-#   $2 - Destination file path for the merged report
-merge_sarif_files() {
-  local glob_pattern="$1"
-  local dest_file="$2"
-
-  info "Merging SARIF files: $glob_pattern -> $dest_file"
-
-  # Check if any files match the pattern
-  # shellcheck disable=SC2206
-  local files=($glob_pattern)
-  if [[ ! -f "${files[0]}" ]]; then
-    warn "No files found matching pattern: $glob_pattern"
-    return 0
-  fi
-
-  # Merge SARIF files using jq to combine runs from multiple files
-  # shellcheck disable=SC2086
-  if ! jq -s '{
-    "$schema": "https://json.schemastore.org/sarif-2.1.0",
-    "version": "2.1.0",
-    "runs": map(.runs) | add
-  }' $glob_pattern > "$dest_file"; then
-    error "Failed to merge SARIF files for pattern: $glob_pattern"
-    return 1
-  fi
-
-  success "Successfully merged ${#files[@]} files into $dest_file"
-}
-
 main() {
   info "Starting container vulnerability scanning process..."
 
@@ -174,13 +140,6 @@ main() {
   if [[ $failed_scans -gt 0 ]]; then
     warn "Some scans failed. Check the logs above for details."
   fi
-
-  # Merge SARIF files by distribution type
-  info "Merging SARIF reports by distribution..."
-  merge_sarif_files "$scans_dir/alpine*.sarif" "$tmp_dir/alpine.sarif"
-  merge_sarif_files "$scans_dir/debian*.sarif" "$tmp_dir/debian.sarif"
-  merge_sarif_files "$scans_dir/distroless*.sarif" "$tmp_dir/distroless.sarif"
-  merge_sarif_files "$scans_dir/ubuntu*.sarif" "$tmp_dir/ubuntu.sarif"
 
   # Cleanup intermediate OCI directories (keep SARIF files)
   info "Cleaning up intermediate files..."
