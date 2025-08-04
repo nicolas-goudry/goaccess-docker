@@ -1,7 +1,6 @@
 name: Update GeoLite
 
 on:
-  repository_dispatch:
   workflow_dispatch:
   schedule:
     # Run every day

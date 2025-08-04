@@ -1,0 +1,33 @@
+name: Code scanning
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  pull_request:
+    types:
+      - opened
+      - synchronize
+    branches: [main]
+    paths:
+      - "lib/*.nix"
+      - "pkgs/*.nix"
+      - "scripts/trivy-scan/**/*"
+
+jobs:
+  trivy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event.pull_request.id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+      - name: Build SARIF file
+        run: nix run '.#trivy-scan'
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: .trivy/all.sarif
