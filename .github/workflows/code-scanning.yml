@@ -1,0 +1,70 @@
+name: Code scanning
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  pull_request:
+    types:
+      - opened
+      - synchronize
+    branches: [main]
+    paths:
+      - "lib/*.nix"
+      - "pkgs/*.nix"
+      - "scripts/trivy-scan/**/*"
+
+jobs:
+  trivy-scan:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event.pull_request.id }}
+    outputs:
+      sarif_files: ${{ steps.sarif_files.outputs.sarif_files }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+      - name: Build SARIF file
+        run: nix run '.#trivy-scan'
+      - name: Get SARIF files
+        id: sarif_files
+        run: |
+          sarifs=(.trivy/scan_results/*.sarif)
+          json_array=$(printf '%s\n' "${sarifs[@]}" | jq -R . | jq -sc .)
+          echo "sarif_files=$json_array" >> $GITHUB_OUTPUT
+      - name: Upload SARIF files
+        uses: actions/upload-artifact@v4
+        with:
+          name: sarif_files
+          include-hidden-files: true
+          path: .trivy/scan_results/*.sarif
+
+  upload-sarifs:
+    needs: trivy-scan
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        sarif_file: ${{ fromJson(needs.trivy-scan.outputs.sarif_files) }}
+    steps:
+      - name: Download SARIF files
+        uses: actions/download-artifact@v4
+        with:
+          name: sarif_files
+          path: .trivy/scan_results
+      - name: Extract category from filename
+        id: category
+        run: |
+          filename=$(basename "${{ matrix.sarif_file }}")
+          category="${filename%.sarif}"
+          echo "category=$category" >> $GITHUB_OUTPUT
+      - name: "Upload sarif file: ${{ matrix.sarif_file }}"
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ matrix.sarif_file }}
+          category: ${{ steps.category.outputs.category }}

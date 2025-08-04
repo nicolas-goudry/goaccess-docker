@@ -16,32 +16,26 @@
   xpkgs ? pkgs.lib.packagesFromDirectoryRecursive {
     inherit (pkgs) callPackage;
 
-    directory = ./pkgs;
+    directory = ../pkgs;
   },
 }:
 
 let
-  inherit (pkgs) mkShellNoCC lib;
-
-  scripts = lib.map (img: img.value) (
-    lib.attrsToList (import ./scripts { inherit pkgs xpkgs nix2container; })
-  );
+  xlib = import ../lib {
+    inherit pkgs xpkgs;
+    inherit (nix2container) nix2container;
+  };
+  lib = pkgs.lib;
+  currentDir = ./.;
+  packages = lib.filterAttrs (
+    name: type:
+    (type == "directory" && name != "_template") || (lib.hasSuffix ".nix" name && name != "default.nix")
+  ) (builtins.readDir currentDir);
 in
-mkShellNoCC {
-  nativeBuildInputs =
-    (with pkgs; [
-      bash
-      coreutils
-      findutils
-      mmdbinspect
-    ])
-    ++ scripts;
-
-  shellHook = ''
-    find .hooks \
-      -maxdepth 1 \
-      -type f \
-      -name '*.sh' \
-      -exec bash -c 'ln -sf "$PWD/$1" ".git/hooks/$(basename "$1" .sh)"' _ {} \;
-  '';
-}
+lib.mapAttrs (
+  name: type:
+  pkgs.callPackage (currentDir + "/${name}") {
+    inherit xlib;
+    inherit (nix2container) skopeo-nix2container;
+  }
+) packages
