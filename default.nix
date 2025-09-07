@@ -23,8 +23,8 @@
 let
   xlib = import ./lib { inherit nix2container pkgs xpkgs; };
 in
-xlib.mkAllImages
+pkgs.lib.mapAttrs (_: value: value.image) xlib.mkAllImages
 // xpkgs
 // {
-  default = xlib.mkImage { };
+  default = (xlib.mkImage { }).image;
 }

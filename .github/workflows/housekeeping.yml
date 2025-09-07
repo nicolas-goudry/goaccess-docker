@@ -1,7 +1,6 @@
 name: Cleanup
 
 on:
-  repository_dispatch:
   workflow_dispatch:
   schedule:
     # Run every day

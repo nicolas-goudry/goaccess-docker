@@ -87,10 +87,6 @@ rec {
         }
       );
 
-    in
-    nix2container.buildImage {
-      name = "goaccess";
-
       # Generate tag based on version and enabled features
       tag = lib.concatStrings [
         goaccess.version
@@ -98,33 +94,40 @@ rec {
         (lib.optionalString (!withGeolite2 && withGeolocation) "-geoip")
         (lib.optionalString (baseImage != "") "-${baseImage}")
       ];
+    in
+    {
+      inherit tag;
 
-      # Set the base image to build from (empty string means scratch/no base)
-      fromImage =
-        if (baseImage != "") then
+      image = nix2container.buildImage {
+        inherit tag;
+
+        name = "goaccess";
+
+        # Set the base image to build from
+        fromImage = lib.optionalString (baseImage != "") (
           nix2container.pullImage (distros.${baseImage} or throwDistro)
-        else
-          baseImage;
+        );
 
-      # Build the root filesystem environment
-      copyToRoot = buildEnv {
-        name = "root";
+        # Build the root filesystem environment
+        copyToRoot = buildEnv {
+          name = "root";
 
-        # Packages to include in the container
-        paths =
-          [ goaccessBuild ]
-          # Include GeoLite2 database if requested
-          ++ lib.optional withGeolite2 geolite2;
+          # Packages to include in the container
+          paths =
+            [ goaccessBuild ]
+            # Include GeoLite2 database if requested
+            ++ lib.optional withGeolite2 geolite2;
 
-        # Directories to symlink into the container root
-        pathsToLink = [
-          "/bin"
-          "/etc"
-          "/share"
-        ];
+          # Directories to symlink into the container root
+          pathsToLink = [
+            "/bin"
+            "/etc"
+            "/share"
+          ];
+        };
+
+        # Default command to run when container starts
+        config.Entrypoint = [ "goaccess" ];
       };
-
-      # Default command to run when container starts
-      config.Entrypoint = [ "goaccess" ];
     };
 }

@@ -1,6 +1,6 @@
 {
   "nodes": {
-    "nix2container": {
+    "n2c": {
       "inputs": {
         "nixpkgs": [
           "nixpkgs"
@@ -38,7 +38,7 @@
     },
     "root": {
       "inputs": {
-        "nix2container": "nix2container",
+        "n2c": "n2c",
         "nixpkgs": "nixpkgs",
         "treefmt-nix": "treefmt-nix"
       }
