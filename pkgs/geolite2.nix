@@ -15,13 +15,13 @@ let
 in
 stdenv.mkDerivation {
   name = "geolite2";
-  version = "2025.08.22";
+  version = "2026.10.16";
 
   src = fetchFromGitHub {
     inherit owner repo;
 
     rev = "download";
-    hash = "sha256-/cN4pg/RWtcHT4jmIbwJ6YI8yWEGC1/NeYJlRb62YO8=";
+    hash = "sha256-joVLi1zftI2Dh9yAIE4G5iFofsemdoIMp6+FaiCjpGM=";
   };
 
   dontPatch = true;
